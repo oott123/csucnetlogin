@@ -7,17 +7,50 @@ csucnetlogin 中国电信数字中南登录脚本
 author : oott123
 via : https://github.com/oott123/csucnetlogin
 """
-
+import rsa
 import httplib
 import sys
 import json
 import ConfigParser
+import binascii
+
 config = ConfigParser.ConfigParser()
 configfilename = 'config.ini'
 config.read(configfilename)
 
-###### 使用方法概述 ######
+# 密码加密
+base = [str(x) for x in range(10)] + [ chr(x) for x in range(ord('A'),ord('A')+6)]
 
+def dec2bin(string_num):
+    num = int(string_num)
+    mid = []
+    while True:
+        if num == 0: break
+        num,rem = divmod(num, 2)
+        mid.append(base[rem])
+    result =  ''.join([str(x) for x in mid[::-1]])
+    while len(result)<8:
+        result = "0"+result
+    return result
+def dec2hex(string_num):
+    num = int(string_num)
+    mid = []
+    while True:
+        if num == 0: break
+        num,rem = divmod(num, 16)
+        mid.append(base[rem])
+    return ''.join([str(x) for x in mid[::-1]])
+
+def encrypted_pwd(pwd):
+    n = 118412968095593089696003595256943158860853473161415576733447804842301571568757172298177752975532992898222036246641653221445506569501197901613520593964333398062725892226386301624234776784458736053884120766450015009923516265683635605497451865069151546715184399574358971886504430854133607074276246210978427253829
+    e = 65537
+    pwd = str(pwd)[::-1]
+    pwd_ascii_list = map(lambda x:ord(x),pwd)
+    bin_chain_pwd = ''.join(dec2bin(x) for x in pwd_ascii_list)
+    return dec2hex(pow(int(bin_chain_pwd,2),e,n)).lower()
+
+
+###### 使用方法概述 ######
 if len(sys.argv) <= 1 or not sys.argv[1] in ('login','logout'):
 	usage = """======= ChinaNet-CSU login script =======
 usage: %s login|logout""" % sys.argv[0]
@@ -44,12 +77,10 @@ if sys.argv[1] == 'login':
 	if config.has_option('user','password'):
 		password = config.get('user','password',True)
 	else:
-		print "WARNING : DO NOT ENTER YOUR PASSWORD DIRECTLY , USE ENCRYPED INSTEAD. FOR MOR DETAILS PLEASE READ FAQS."
-		print "Simple direction: fill in the password in your login page and paste this to your nav bar :"
-		print 'javascript:alert(RSAUtils.encryptedString(publickey, encodeURIComponent($("#userPassword").val())));void(0);'
 		print "Input your secret:",
 		password = raw_input()
 		password = password.rstrip()
+		password = encrypted_pwd(password)
 		#保存配置信息
 		config.set('user','password',password)
 		config.write(open(configfilename,'w'))
@@ -61,9 +92,10 @@ else:
 
 ###### 判断用户是否登录 ######
 
-#202.197.61.57为中南大学中文主页的校内IP地址。这里连接它是为了判断用户是否登录了。
+#202.108.22.5为百度首页，这里为了获取IP而进行连接
+#
 print "Checking your login status ... "
-conn = httplib.HTTPConnection("202.197.61.57")
+conn = httplib.HTTPConnection("202.108.22.5")
 conn.request('HEAD', '/')
 res = conn.getresponse()
 conn.close()
@@ -134,7 +166,7 @@ else:
 	#print "postData:",postData
 	postHeader = {"Host": "61.137.86.87",
 		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:21.0) Gecko/20100101 Firefox/21.0",
-		"Referer": "http://61.137.86.87:8080/portalNat444/index.jsp",
+		"Referer": "http://61.137.86.87:8080/portalNat444/main2.jsp",
 		'Accept': 'application/json, text/javascript, */*; q=0.01',
 		'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
 		'X-Requested-With': 'XMLHttpRequest'}
@@ -151,3 +183,4 @@ else:
 	config.remove_option('user','bas')
 	config.remove_option('user','wlanuserip')
 	config.write(open(configfilename,'w'))
+
