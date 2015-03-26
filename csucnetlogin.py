@@ -7,12 +7,11 @@ csucnetlogin 中国电信数字中南登录脚本
 author : oott123
 via : https://github.com/oott123/csucnetlogin
 """
-import rsa
+
 import httplib
 import sys
 import json
 import ConfigParser
-import binascii
 
 config = ConfigParser.ConfigParser()
 configfilename = 'config.ini'
